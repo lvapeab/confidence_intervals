@@ -1,0 +1,6 @@
+
+# 1. Get scores for the test instances
+python get_scores.py -c ~/smt/tasks/video_desc/youtube/nuestro/DATA/C3D_fc8_ImageNet.CAP.pkl  ~/smt/tasks/video_desc/youtube/model_attention/youtube_objects_nLayers_11101_lstm_bi_717_dim_word_301_dim_484/test_samples.txt > scores
+
+# 2. Compute confidence intervals by bootstrap resampling (e.g. for 10000 iterations and p = 0.05) :
+~/smt/software/confidence_intervals/confidence_intervals_captioning.sh -t scores -n 10000 -i 95
