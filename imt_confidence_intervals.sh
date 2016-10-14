@@ -15,9 +15,9 @@
 # - First version
 
 
-help="\t\t 10/3/2015 Álvaro Peris - 18/11/2011 J.A. Silvestre - 30/10/2009 G. Sanchis-Trilles                                          \n
+help="\t\t 10/3/2015 Á. Peris - 18/11/2011 J.A. Silvestre - 30/10/2009 G. Sanchis-Trilles                    \n
 \n
-Usage:\t confindence_intervals.sh <-t scores> <-n nreps>                                                     \n
+Usage:\t imt_confindence_intervals.sh <-t scores> <-n nreps>                                                 \n
 \t__________________________[-b baseline] [-i interval] [-y] [-v] [-h]                                       \n
 \t This script will take up a WSR and MAR scores file and compute MAR and WSR confidence                     \n
 \t intervals by means of bootstrapping. If [-b baseline] is specified, pairwise improvement                  \n
