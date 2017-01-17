@@ -4,7 +4,7 @@ Bootstrap resampling for some tasks
 ## MT quality: Bleu - TER
 
 ```
-Usage:	 confindence intervals.sh <-r reference> <-t hypothesis> <-n nreps> 
+Usage:	 confindence intervals.sh <-r reference> <-t hypothesis> <-n nreps>  <-l lan> 
  	                          [-b baseline] [-i interval] [-y] [-v] [-h] 
  	 This script will take up a reference file and a hypothesis file and compute TER and BLEU confidence 
  	 intervals by means of bootstrapping. Note: This script needs a *modified* version of TERCOM and 
@@ -15,7 +15,8 @@ Usage:	 confindence intervals.sh <-r reference> <-t hypothesis> <-n nreps>
  	 -t hypothesis: file containing the (machine) translations to be evaluated. 
  	 -n nreps: number of repetitions to do via bootstrapping. 
  	 -i interval: confidence interval to compute (default 95) 
- 	 -y: do not delete temporary files. 
+ 	 -y: do not delete temporary files.
+   -l: language (required for Meteor).  
  	 -v: activate verbose mode (set -x). 
  	 -h: show this help and exit. 
  Output: - confidence interval
