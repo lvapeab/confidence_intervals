@@ -1,6 +1,8 @@
 #!/bin/bash 
 
 # Changelog:
+# 17/01/2017 Álvaro Peris:
+# - Added Meteor metric
 # 18/11/2011 German Sanchis-Trilles:
 # - output range with its appropriate precision (average and interval unchanged for informative reasons)
 # 18/11/2011 Joan Albert Silvestre: 
@@ -12,9 +14,9 @@
 # - First version
 
 
-help="\t\t18/11/2011 J.A. Silvestre - 30/10/2009 G. Sanchis-Trilles                                          \n
+help="\t\t17/01/2017 Á. Peris - 18/11/2011 J.A. Silvestre - 30/10/2009 G. Sanchis-Trilles                    \n
 \n
-Usage:\t confindence_intervals.sh <-r reference> <-t hypothesis> <-n nreps>                                  \n
+Usage:\t confindence_intervals.sh <-r reference> <-t hypothesis> <-n nreps> <-l lan>                          \n
 \t__________________________[-b baseline] [-i interval] [-y] [-v] [-h]                                       \n
 \t This script will take up a reference file and a hypothesis file and compute TER and BLEU confidence       \n
 \t intervals by means of bootstrapping. Note: This script needs a *modified* version of TERCOM and           \n
@@ -26,6 +28,7 @@ Input:\t -r reference: file containing the reference translations.              
 \t       -n nreps: number of repetitions to do via bootstrapping.                                            \n
 \t       -i interval: confidence interval to compute (default 95)                                            \n
 \t       -y: do not delete temporary files.                                                                  \n
+\t       -l: language (required for Meteor).                                                                 \n                                                                                                    
 \t       -v: activate verbose mode (set -x).                                                                 \n
 \t       -h: show this help and exit.                                                                        \n
 Output:  - confidence interval"
@@ -48,6 +51,7 @@ for ((i=0;i<${#cmd[@]};i++)); do
 	"-n")		    nreps=${cmd[$((++i))]};((++moptions));;
 	"-i")		    interval=${cmd[$((++i))]};;
 	"-y")               deletetemp="false";;
+        "-l")               lan=${cmd[$((++i))]};((++moptions));;
         "-v")               set -x;;
         *)               echo -e $help | tr '_' ' '; exit;;
     esac
@@ -80,12 +84,18 @@ mbleu=./sbs_mbleu.perl
 #mbleu=$HOME/bin/sbs_mbleu.perl
 tercom=./sbs_tercom.jar
 
+meteorcom=./meteor-*.jar
+
 $perl $mbleu $ref < $trans 2>&1 | grep -v "^BLEU" > $tmpdir/bleucounts
 
 cat $ref | $AWK '{ print $0,"(TER-"NR")" }' > $tmpdir/ter_ref
 cat $trans | $AWK '{ print $0,"(TER-"NR")" }' > $tmpdir/ter_hyp
 $java -Xmx512m -jar $tercom -r $tmpdir/ter_ref -h $tmpdir/ter_hyp  > $tmpdir/ter_res
 cat $tmpdir/ter_res | grep "Sentence TER: "| cut -d ' ' -f 3,4 > $tmpdir/tercounts
+
+$java -Xmx512m -jar $meteorcom $trans $ref -l $lan  > $tmpdir/meteor_res
+cat $tmpdir/meteor_res | grep "Segment"| $AWK 'BEGIN{FS="\t"}{print $2}' > $tmpdir/meteorcounts
+
 
 if [ "$bas" != "" ]; then  # computing pairwise improvement
 
@@ -96,8 +106,14 @@ if [ "$bas" != "" ]; then  # computing pairwise improvement
 	cat $bas | $AWK '{ print $0,"(TER-"NR")" }' > $tmpdir/ter_bas
 	$java -Xmx512m -jar $tercom -r $tmpdir/ter_ref -h $tmpdir/ter_bas > $tmpdir/ter_res_bas
 	cat $tmpdir/ter_res_bas | grep "Sentence TER: "| cut -d ' ' -f 3,4 > $tmpdir/tercounts_bas
+
+	$java -Xmx512m -jar $meteorcom $bas $ref -l $lan  > $tmpdir/meteor_res_bas
+	cat $tmpdir/meteor_res_bas | grep "Segment" |$AWK 'BEGIN{FS="\t"}{print $2}' > $tmpdir/meteorcounts_bas
+
 	basbleucnts=$tmpdir/bleucounts_bas
 	bastercnts=$tmpdir/tercounts_bas
+	basmeteorcnts=$tmpdir/meteorcounts_bas
+	
 fi
 
 $AWK -v N=$nreps -v interval=$interval -v tmp=$tmpdir -v size=$N '
@@ -105,17 +121,18 @@ function precision (val) {
 #	pp=int(log(N/100)/log(10))   # --> this is buggy... for N=1000 returns pp=2!!
 	pp=length(N)-3
 	return int(val*(10**pp)+0.5)/(10**pp)
-}{
-	if (ARGIND==1) bleucounts[FNR]=$0
+}{	if (ARGIND==1) bleucounts[FNR]=$0
 	if (ARGIND==2) tercounts[FNR]=$0
-	if (ARGIND==3) basbleucounts[FNR]=$0
-	if (ARGIND==4) bastercounts[FNR]=$0
+        if (ARGIND==3) meteorcounts[FNR]=$0
+        if (ARGIND==4) basbleucounts[FNR]=$0
+	if (ARGIND==5) bastercounts[FNR]=$0
+        if (ARGIND==6) basmeteorcounts[FNR]=$0                                                                                                                                                                     
 } END {
 	srand()
 	printf "Computing confidence intervals with %d digits of precision...\n",length(N)-1
 	for (n=1;n<=N;++n) {
-		delete tercountacc;    delete bleucountacc
-		if (ARGIND==4) { delete bastercountacc; delete basbleucountacc }
+		delete tercountacc; delete bleucountacc; delete meteorcountacc;
+		if (ARGIND==6) { delete bastercountacc; delete basbleucountacc; delete basmeteorcountacc; }
 		for (i=1;i<=FNR;++i) {
 			id=int(rand()*size+1)
 			split(tercounts[id], tp)
@@ -124,9 +141,13 @@ function precision (val) {
 			split(bleucounts[id], bp)
 			for (j=1;j<=9;++j) bleucountacc[j]+=bp[j]
 
-			if (ARGIND==4) {
+                        
+                        meteorcountacc[1]+=meteorcounts[id];
+
+			if (ARGIND==6) {
 				split(bastercounts[id], tp)
 				bastercountacc[1]+=tp[1]; bastercountacc[2]+=tp[2]
+                                basmeteorcountacc[1]+=basmeteorcounts[id];      
 				split(basbleucounts[id], bp)
 				for (j=1;j<=9;++j) basbleucountacc[j]+=bp[j]
 			}
@@ -142,9 +163,10 @@ function precision (val) {
 				log(bleucountacc[2]/bleucountacc[6]) + \
 				log(bleucountacc[3]/bleucountacc[7]) + \
 				log(bleucountacc[4]/bleucountacc[8]))/4)*brevpen
-
-		if (ARGIND==4) { 
+                meteors[n]=meteorcountacc[1]/FNR
+		if (ARGIND==6) { 
 			baster[n]=bastercountacc[1]/bastercountacc[2]
+                        basmeteor[n]=basmeteorcountacc[1]/FNR
 			if (basbleucountacc[9] > basbleucountacc[5])
 				basbrevpen=exp(1-basbleucountacc[9]/basbleucountacc[5])
 			else basbrevpen=1
@@ -157,15 +179,17 @@ function precision (val) {
 				log(basbleucountacc[4]/basbleucountacc[8]))/4)*basbrevpen
 			bleudiffs[n]=bleus[n]-basbleu[n]
 			terdiffs[n]=ters[n]-baster[n]
+                        meteordiffs[n]=meteors[n]-basmeteor[n]
 			BPdiffs[n]=brevpenalties[n]-basbrevpenalties[n]
 		}
 	if (n%100==0) printf(".");
 	}
-	asort(bleus); asort(ters); asort(brevpenalties);
-	if (ARGIND==4) { asort(basbleu); asort(baster); asort(basbrevpenalties); asort(terdiffs); asort(bleudiffs); asort(BPdiffs)}
+	asort(bleus); asort(ters); asort(brevpenalties); asort(meteors)
+	if (ARGIND==6) { asort(basbleu); asort(baster); asort(basbrevpenalties); asort(terdiffs); asort(bleudiffs); asort(BPdiffs); asort(basmeteor); asort(meteordiffs)}
 
 	for (i=1;i<=N;++i) printf("%s ", ters[i]) > tmp"/ters"
 	for (i=1;i<=N;++i) printf("%s ", bleus[i]) > tmp"/bleus"
+        for (i=1;i<=N;++i) printf("%s ", meteors[i]) > tmp"/meteors"                                                                                                                                               
 	for (i=1;i<=N;++i) printf("%s ", brevpenalties[i]) > tmp"/BPs"
 
 	print ""
@@ -178,14 +202,18 @@ function precision (val) {
 	avgBP=(lowerBP+upperBP)/2; BPint=upperBP-avgBP
 	lowerter=ters[rest]*100;         upperter=ters[N-rest]*100
 	avgter=(lowerter+upperter)/2;    terint=upperter-avgter
-	printf "BLEU %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowerbleu),precision(upperbleu),avgbleu,bleuint
-	printf "BP   %2.1f%% confidence interval:            %1.4f --  %1.4f (  %1.4f +- %1.4f )\n",interval,precision(lowerBP*100)/100,precision(upperBP*100)/100,avgBP,BPint
-	printf "TER  %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowerter),precision(upperter),avgter,terint
+        lowermeteor=meteors[rest]*100;   uppermeteor=meteors[N-rest]*100                                                                                                                                           
+        avgmeteor=(lowermeteor+uppermeteor)/2;  meteorint=uppermeteor-avgmeteor                                                                                                                                                     
+	printf "BLEU   %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowerbleu),precision(upperbleu),avgbleu,bleuint
+	printf "BP     %2.1f%% confidence interval:           %1.4f --  %1.4f ( %1.4f +- %1.4f )\n",interval,precision(lowerBP*100)/100,precision(upperBP*100)/100,avgBP,BPint
+	printf "TER    %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowerter),precision(upperter),avgter,terint
+        printf "METEOR %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowermeteor),precision(uppermeteor),avgmeteor,meteorint                                                     
+
 #	print "BLEU "interval"% confidence interval:            " lowerbleu " -- " upperbleu " ( " avgbleu " +- " bleuint " )"
 #	print "BP   "interval"% confidence interval:            " lowerBP " -- " upperBP " ( " avgBP " +- " BPint " )"
 #	print "TER  "interval"% confidence interval:            " lowerter " -- " upperter " ( " avgter " +- " terint " )"
 
-	if (ARGIND==4) {
+	if (ARGIND==6) {
 		print ""
 		print "Confidence intervals for baseline:"
 	        lowerbasbleu=basbleu[rest]*100;       upperbasbleu=basbleu[N-rest]*100
@@ -194,18 +222,19 @@ function precision (val) {
 					avgbasBP=(lowerbasBP+upperbasBP)/2; basBPint=upperbasBP-avgbasBP
 	        lowerbaster=baster[rest]*100;         upperbaster=baster[N-rest]*100
 	        avgbaster=(lowerbaster+upperbaster)/2;    basterint=upperbaster-avgbaster
-		printf "BLEU %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowerbasbleu),precision(upperbasbleu),avgbasbleu,basbleuint
-		printf "BP   %2.1f%% confidence interval:            %1.4f --  %1.4f (  %1.4f +- %1.4f )\n",interval,precision(lowerBP*100)/100,precision(upperBP*100)/100,avgbasBP,basBPint
-		printf "TER  %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %2.4f )\n",interval,precision(lowerbaster),precision(upperbaster),avgbaster,basterint
-
+                lowerbasmeteor=basmeteor[rest]*100;    upperbasmeteor=basmeteor[N-rest]*100                                                             
+                avgbasmeteor=(lowerbasmeteor+upperbasmeteor)/2;    basmeteorint=upperbasmeteor-avgbasmeteor
+		printf "BLEU    %2.1f%% confidence interval:       %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowerbasbleu),precision(upperbasbleu),avgbasbleu,basbleuint
+		printf "BP      %2.1f%% confidence interval:       %1.4f --  %1.4f (  %1.4f +- %1.4f )\n",interval,precision(lowerBP*100)/100,precision(upperBP*100)/100,avgbasBP,basBPint
+		printf "TER     %2.1f%% confidence interval:       %2.4f -- %2.4f ( %2.4f +- %2.4f )\n",interval,precision(lowerbaster),precision(upperbaster),avgbaster,basterint
+                printf "METEOR  %2.1f%% confidence interval:       %2.4f -- %2.4f ( %2.4f +- %2.4f )\n",interval,precision(lowerbasmeteor),precision(upperbasmeteor),avgbasmeteor,basmeteorint   
 #	        print "BLEU "interval"% confidence interval:            " lowerbasbleu " -- " upperbasbleu " ( " avgbasbleu " +- " basbleuint " )"
 #		print "BP   "interval"% confidence interval:            " lowerbasBP " -- " upperbasBP " ( " avgbasBP " +- " basBPint " )"
 #	        print "TER  "interval"% confidence interval:            " lowerbaster " -- " upperbaster " ( " avgbaster " +- " basterint " )"
 		
-
-
 		print ""
 		for (i=1;i<=N;++i) printf("%s ", terdiffs[i]) > tmp"/terdiffs"
+                for (i=1;i<=N;++i) printf("%s ", meteordiffs[i]) > tmp"/meteordiffs"                                                           
 		for (i=1;i<=N;++i) printf("%s ", bleudiffs[i]) > tmp"/bleudiffs"
 		lowerbleudiff=bleudiffs[rest]*100;               upperbleudiff=bleudiffs[N-rest]*100
 		avgbleudiff=(lowerbleudiff+upperbleudiff)/2;     bleuintdiff=upperbleudiff-avgbleudiff
@@ -213,13 +242,16 @@ function precision (val) {
 		avgBPdiff=(lowerBPdiff+upperBPdiff)/2;     BPintdiff=upperBPdiff-avgBPdiff
 		lowerterdiff=terdiffs[rest]*100;                 upperterdiff=terdiffs[N-rest]*100
 		avgterdiff=(lowerterdiff+upperterdiff)/2;        terintdiff=upperterdiff-avgterdiff
-		printf "BLEU pairwise improvement %2.1f%% interval: % 2.4f -- % 2.4f ( % 2.4f +- % 1.4f )\n",interval,precision(lowerbleudiff),precision(upperbleudiff),avgbleudiff,bleuintdiff
-		printf "BP   pairwise improvement %2.1f%% interval: % 2.4f -- % 2.4f ( % 2.4f +- % 1.4f )\n",interval,precision(lowerBPdiff*100)/100,precision(upperBPdiff*100)/100,avgBPdiff,BPintdiff
-		printf "TER  pairwise improvement %2.1f%% interval: % 2.4f -- % 2.4f ( % 2.4f +- % 1.4f )\n",interval,precision(lowerterdiff),precision(upperterdiff),avgterdiff,terintdiff
+                lowermeteordiff=meteordiffs[rest]*100;                 uppermeteordiff=meteordiffs[N-rest]*100                                                                    
+                avgmeteordiff=(lowermeteordiff+uppermeteordiff)/2;        meteorintdiff=uppermeteordiff-avgmeteordiff     
+		printf "BLEU    pairwise improvement %2.1f%% interval: % 2.4f -- % 2.4f ( % 2.4f +- % 1.4f )\n",interval,precision(lowerbleudiff),precision(upperbleudiff),avgbleudiff,bleuintdiff
+		printf "BP      pairwise improvement %2.1f%% interval: % 2.4f -- % 2.4f ( % 2.4f +- % 1.4f )\n",interval,precision(lowerBPdiff*100)/100,precision(upperBPdiff*100)/100,avgBPdiff,BPintdiff
+		printf "TER     pairwise improvement %2.1f%% interval: % 2.4f -- % 2.4f ( % 2.4f +- % 1.4f )\n",interval,precision(lowerterdiff),precision(upperterdiff),avgterdiff,terintdiff
+                printf "METEOR  pairwise improvement %2.1f%% interval: % 2.4f -- % 2.4f ( % 2.4f +- % 1.4f )\n",interval,precision(lowermeteordiff),precision(uppermeteordiff),avgmeteordiff,meteorintdiff                         
 #		print "BLEU pairwise improvement "interval"% interval: " lowerbleudiff " -- " upperbleudiff " ( " avgbleudiff " +- " bleuintdiff " )"
 #		print "BP   pairwise improvement "interval"% interval: " lowerBPdiff " -- " upperBPdiff " ( " avgBPdiff " +- " BPintdiff " )"
 #		print "TER pairwise improvement  "interval"% interval: " lowerterdiff " -- " upperterdiff " ( " avgterdiff " +- " terintdiff " )"
 	}
-}' $tmpdir/bleucounts $tmpdir/tercounts $basbleucnts $bastercnts
+}' $tmpdir/bleucounts $tmpdir/tercounts $tmpdir/meteorcounts $basbleucnts $bastercnts $basmeteorcnts
 
 exit
