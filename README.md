@@ -1,7 +1,7 @@
 # confidence_intervals
 Bootstrap resampling for some tasks
 
-## MT quality: Bleu - TER
+## MT quality: Bleu - TER - Meteor
 
 ```
 Usage:	 confindence intervals.sh <-r reference> <-t hypothesis> <-n nreps>  <-l lan> 
