@@ -127,11 +127,19 @@ function precision (val) {
 	
         lowerwsr=wsrs[rest]*100;       upperwsr=wsrs[N-rest]*100
 	avgwsr=(lowerwsr+upperwsr)/2; wsrint=upperwsr-avgwsr
-        
         lowermar=mars[rest]*100;         uppermar=mars[N-rest]*100
 	avgmar=(lowermar+uppermar)/2;    marint=uppermar-avgmar
-	printf "WSR  %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowerwsr),precision(upperwsr),avgwsr,wsrint
-	printf "MAR  %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowermar),precision(uppermar),avgmar,marint
+
+    sumsq_wsr=0
+    sumsq_mar=0
+    for(i=1;i<=N;i++) {
+          sumsq_wsr += (wsrs[i]*100 - avgwsr)^2
+          sumsq_mar += (mars[i]*100 - avgmar)^2
+          }
+          stdev_wsr=sqrt(sumsq_wsr/(N-1))
+          stdev_mar=sqrt(sumsq_mar/(N-1))
+	printf "WSR  %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f ) - WSR stdev: %1.4f \n",interval,precision(lowerwsr),precision(upperwsr),avgwsr,wsrint,stdev_wsr
+	printf "MAR  %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f ) - MAR stdev: %1.4f \n",interval,precision(lowermar),precision(uppermar),avgmar,marint,stdev_mar
 #	print "WSR     "interval"% confidence interval:            " lowerwsr " -- " upperwsr " ( " avgwsr " +- " wsrint " )"
 #	print "MAR     "interval"% confidence interval:            " lowermar " -- " uppermar " ( " avgmar " +- " marint " )"
 

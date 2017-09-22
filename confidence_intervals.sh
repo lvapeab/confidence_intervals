@@ -40,7 +40,7 @@ interval=95
 
 me=${BASH_SOURCE[0]}
 
-nmoptions=$(cat $me | $AWK '/^exit$/{exit}{print $0}' | grep "++moptions" | wc -l | gawk '{ print $1-1 }')
+nmoptions=$(cat ${me} | ${AWK} '/^exit$/{exit}{print $0}' | grep "++moptions" | wc -l | gawk '{ print $1-1 }')
 moptions=0;
 cmd=("$@")
 for ((i=0;i<${#cmd[@]};i++)); do
@@ -53,28 +53,28 @@ for ((i=0;i<${#cmd[@]};i++)); do
 	"-y")               deletetemp="false";;
         "-l")               lan=${cmd[$((++i))]};((++moptions));;
         "-v")               set -x;;
-        *)               echo -e $help | tr '_' ' '; exit;;
+        *)               echo -e ${help} | tr '_' ' '; exit;;
     esac
 done
 
-if [ $moptions -lt $nmoptions ]; then echo -e $help | tr '_' ' '; exit; fi
+if [ ${moptions} -lt ${nmoptions} ]; then echo -e ${help} | tr '_' ' '; exit; fi
 
 if [ "$(which tmpdir)" == "" ]; then 
 	if [ -d $HOME/tmp ]; then TMPPREF="$HOME/tmp";
 	else TMPPREF="/tmp"; fi
 else TMPPREF=$(tmpdir); fi
-tmpdir=`mktemp -d $TMPPREF/conftmp.XXXXXXXXXXX`
-if [ "$deletetemp" == "" ]; then
-    trap "rm -rf $tmpdir" EXIT;
+tmpdir=`mktemp -d ${TMPPREF}/conftmp.XXXXXXXXXXX`
+if [ "${deletetemp}" == "" ]; then
+    trap "rm -rf ${tmpdir}" EXIT;
 else
     echo "Temporary directory created in $tmpdir"; echo "NOT deleting it!!";
-    trap "echo 'Remember to delete temp!! Use:'; echo 'rm -rf '$tmpdir" EXIT;
+    trap "echo 'Remember to delete temp!! Use:'; echo 'rm -rf '${tmpdir}" EXIT;
 fi
 
 echo "Reading reference translations from $ref..."
 echo "Reading hypotheses from $trans..."
 
-N=$(wc -l $ref | $AWK '{ print $1 }')
+N=$(wc -l ${ref} | ${AWK} '{ print $1 }')
 
 mbleu=./sbs_mbleu.perl
 #tercom=$tmpdir/sbs_tercom.jar
@@ -86,37 +86,37 @@ tercom=./sbs_tercom.jar
 
 meteorcom=./meteor-*.jar
 
-$perl $mbleu $ref < $trans 2>&1 | grep -v "^BLEU" > $tmpdir/bleucounts
+${perl} ${mbleu} ${ref} < ${trans} 2>&1 | grep -v "^BLEU" > ${tmpdir}/bleucounts
 
-cat $ref | $AWK '{ print $0,"(TER-"NR")" }' > $tmpdir/ter_ref
-cat $trans | $AWK '{ print $0,"(TER-"NR")" }' > $tmpdir/ter_hyp
-$java -Xmx512m -jar $tercom -r $tmpdir/ter_ref -h $tmpdir/ter_hyp  > $tmpdir/ter_res
-cat $tmpdir/ter_res | grep "Sentence TER: "| cut -d ' ' -f 3,4 > $tmpdir/tercounts
+cat ${ref} | ${AWK} '{ print $0,"(TER-"NR")" }' > ${tmpdir}/ter_ref
+cat ${trans} | ${AWK} '{ print $0,"(TER-"NR")" }' > ${tmpdir}/ter_hyp
+${java} -Xmx512m -jar ${tercom} -r ${tmpdir}/ter_ref -h ${tmpdir}/ter_hyp  > ${tmpdir}/ter_res
+cat ${tmpdir}/ter_res | grep "Sentence TER: "| cut -d ' ' -f 3,4 > ${tmpdir}/tercounts
 
-$java -Xmx512m -jar $meteorcom $trans $ref -l $lan  > $tmpdir/meteor_res
-cat $tmpdir/meteor_res | grep "Segment"| $AWK 'BEGIN{FS="\t"}{print $2}' > $tmpdir/meteorcounts
+${java} -Xmx512m -jar ${meteorcom} ${trans} ${ref} -l ${lan}  > ${tmpdir}/meteor_res
+cat ${tmpdir}/meteor_res | grep "Segment"| ${AWK} 'BEGIN{FS="\t"}{print $2}' > ${tmpdir}/meteorcounts
 
 
 if [ "$bas" != "" ]; then  # computing pairwise improvement
 
 	echo -e "Reading baseline translations from $bas..."
 	echo -e "baseline given: will compute pairwise improvement intervals as well!"
-	$perl $mbleu $ref < $bas 2>&1 | grep -v "^BLEU" > $tmpdir/bleucounts_bas
+	${perl} ${mbleu} ${ref} < ${bas} 2>&1 | grep -v "^BLEU" > ${tmpdir}/bleucounts_bas
 
-	cat $bas | $AWK '{ print $0,"(TER-"NR")" }' > $tmpdir/ter_bas
-	$java -Xmx512m -jar $tercom -r $tmpdir/ter_ref -h $tmpdir/ter_bas > $tmpdir/ter_res_bas
-	cat $tmpdir/ter_res_bas | grep "Sentence TER: "| cut -d ' ' -f 3,4 > $tmpdir/tercounts_bas
+	cat ${bas} | ${AWK} '{ print $0,"(TER-"NR")" }' > ${tmpdir}/ter_bas
+	${java} -Xmx512m -jar ${tercom} -r ${tmpdir}/ter_ref -h ${tmpdir}/ter_bas > ${tmpdir}/ter_res_bas
+	cat ${tmpdir}/ter_res_bas | grep "Sentence TER: "| cut -d ' ' -f 3,4 > ${tmpdir}/tercounts_bas
 
-	$java -Xmx512m -jar $meteorcom $bas $ref -l $lan  > $tmpdir/meteor_res_bas
-	cat $tmpdir/meteor_res_bas | grep "Segment" |$AWK 'BEGIN{FS="\t"}{print $2}' > $tmpdir/meteorcounts_bas
+	${java} -Xmx512m -jar ${meteorcom} ${bas} ${ref} -l ${lan}  > ${tmpdir}/meteor_res_bas
+	cat ${tmpdir}/meteor_res_bas | grep "Segment" |${AWK} 'BEGIN{FS="\t"}{print $2}' > ${tmpdir}/meteorcounts_bas
 
-	basbleucnts=$tmpdir/bleucounts_bas
-	bastercnts=$tmpdir/tercounts_bas
-	basmeteorcnts=$tmpdir/meteorcounts_bas
+	basbleucnts=${tmpdir}/bleucounts_bas
+	bastercnts=${tmpdir}/tercounts_bas
+	basmeteorcnts=${tmpdir}/meteorcounts_bas
 	
 fi
 
-$AWK -v N=$nreps -v interval=$interval -v tmp=$tmpdir -v size=$N '
+${AWK} -v N=${nreps} -v interval=${interval} -v tmp=${tmpdir} -v size=${N} '
 function precision (val) {
 #	pp=int(log(N/100)/log(10))   # --> this is buggy... for N=1000 returns pp=2!!
 	pp=length(N)-3
@@ -204,10 +204,23 @@ function precision (val) {
 	avgter=(lowerter+upperter)/2;    terint=upperter-avgter
         lowermeteor=meteors[rest]*100;   uppermeteor=meteors[N-rest]*100                                                                                                                                           
         avgmeteor=(lowermeteor+uppermeteor)/2;  meteorint=uppermeteor-avgmeteor                                                                                                                                                     
-	printf "BLEU   %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowerbleu),precision(upperbleu),avgbleu,bleuint
-	printf "BP     %2.1f%% confidence interval:           %1.4f --  %1.4f ( %1.4f +- %1.4f )\n",interval,precision(lowerBP*100)/100,precision(upperBP*100)/100,avgBP,BPint
-	printf "TER    %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowerter),precision(upperter),avgter,terint
-        printf "METEOR %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowermeteor),precision(uppermeteor),avgmeteor,meteorint                                                     
+
+    sumsq_bleu=0
+    sumsq_ter=0
+    sumsq_meteor=0
+    for(i=1;i<=N;i++) {
+          sumsq_bleu += (bleus[i]*100 - avgbleu)^2
+          sumsq_ter += (ters[i]*100 - avgter)^2
+          sumsq_meteor += (meteors[i]*100 - avgmeteor)^2
+          }
+          stdev_bleu=sqrt(sumsq_bleu/(N-1))
+          stdev_ter=sqrt(sumsq_ter/(N-1))
+          stdev_meteor=sqrt(sumsq_meteor/(N-1))
+
+	printf "BLEU   %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f ) - BLEU stdev: %1.4f \n",interval,precision(lowerbleu),precision(upperbleu),avgbleu,bleuint,stdev_bleu
+	printf "BP     %2.1f%% confidence interval:           %1.4f --  %1.4f ( %1.4f +- %1.4f ) \n",interval,precision(lowerBP*100)/100,precision(upperBP*100)/100,avgBP,BPint
+	printf "TER    %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f ) - TER stdev: %1.4f \n",interval,precision(lowerter),precision(upperter),avgter,terint,stdev_ter
+    printf "METEOR %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f ) - METEOR stdev: %1.4f \n",interval,precision(lowermeteor),precision(uppermeteor),avgmeteor,meteorint,stdev_meteor
 
 #	print "BLEU "interval"% confidence interval:            " lowerbleu " -- " upperbleu " ( " avgbleu " +- " bleuint " )"
 #	print "BP   "interval"% confidence interval:            " lowerBP " -- " upperBP " ( " avgBP " +- " BPint " )"
@@ -252,6 +265,6 @@ function precision (val) {
 #		print "BP   pairwise improvement "interval"% interval: " lowerBPdiff " -- " upperBPdiff " ( " avgBPdiff " +- " BPintdiff " )"
 #		print "TER pairwise improvement  "interval"% interval: " lowerterdiff " -- " upperterdiff " ( " avgterdiff " +- " terintdiff " )"
 	}
-}' $tmpdir/bleucounts $tmpdir/tercounts $tmpdir/meteorcounts $basbleucnts $bastercnts $basmeteorcnts
+}' ${tmpdir}/bleucounts ${tmpdir}/tercounts ${tmpdir}/meteorcounts ${basbleucnts} ${bastercnts} ${basmeteorcnts}
 
 exit
