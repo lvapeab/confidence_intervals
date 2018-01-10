@@ -2,6 +2,8 @@
 
 # Changelog:
 
+# 30/11/2017 Álvaro Peris Abril:
+# - Added KSMR
 # 10/3/2015 Álvaro Peris Abril:
 # - Adapted for taking WSR and MAR
 # 18/11/2011 German Sanchis-Trilles:
@@ -98,27 +100,39 @@ function precision (val) {
 		for (i=1;i<=FNR;++i) {
 			id=int(rand()*size+1)
 			split(wsrcounts[id], tp)
-			wsrcountacc[1]+=tp[1]; wsrcountacc[2]+=tp[2];
+			wsrcountacc[1]+=tp[1]; 
+                        wsrcountacc[2]+=tp[2];
+                        wsrcountacc[3]+=tp[3];
 			if (ARGIND==2) {
 				split(baswsrcounts[id], tp)
-				baswsrcountacc[1]+=tp[1]; baswsrcountacc[2]+=tp[2];
+				baswsrcountacc[1]+=tp[1]; 
+                                baswsrcountacc[2]+=tp[2];
+                                baswsrcountacc[3]+=tp[3];
+
 			}
 		}
 		wsrs[n]=wsrcountacc[1]/FNR
                 mars[n]=wsrcountacc[2]/FNR
+                ksmrs[n]=wsrcountacc[3]/FNR
+
+
 		if (ARGIND==2) { 
 			baswsr[n]=baswsrcountacc[1]/FNR
                         basmar[n]=baswsrcountacc[2]/FNR 
+                        basksmr[n]=baswsrcountacc[3]/FNR 
 			wsrdiffs[n]=wsrs[n]-baswsr[n]
 			mardiffs[n]=mars[n]-basmar[n]
+			ksmrdiffs[n]=ksmrs[n]-basksmr[n]
 			}
 	if (n%100==0) printf(".");
 	}
-	asort(wsrs); asort(mars); 
-	if (ARGIND==2) { asort(baswsr); asort(basmar); asort(wsrdiffs); asort(mardiffs)}
+	asort(wsrs); asort(mars); asort(ksmrs);
+	if (ARGIND==2) { asort(baswsr); asort(basmar); asort(basksmr); asort(wsrdiffs); asort(mardiffs); asort(ksmrdiffs)}
 
 	for (i=1;i<=N;++i) printf("%s ", wsrs[i]) > tmp"/wsrs"
 	for (i=1;i<=N;++i) printf("%s ", mars[i]) > tmp"/mars"
+	for (i=1;i<=N;++i) printf("%s ", ksmrs[i]) > tmp"/ksmrs"
+
 
 	print ""
 	print "                                          [ from -- to ]    ( average +- interval )"
@@ -129,17 +143,25 @@ function precision (val) {
 	avgwsr=(lowerwsr+upperwsr)/2; wsrint=upperwsr-avgwsr
         lowermar=mars[rest]*100;         uppermar=mars[N-rest]*100
 	avgmar=(lowermar+uppermar)/2;    marint=uppermar-avgmar
+        lowerksmr=ksmrs[rest]*100;         upperksmr=ksmrs[N-rest]*100
+	avgksmr=(lowerksmr+upperksmr)/2;    ksmrint=upperksmr-avgksmr
 
     sumsq_wsr=0
     sumsq_mar=0
+    sumsq_ksmr=0
     for(i=1;i<=N;i++) {
           sumsq_wsr += (wsrs[i]*100 - avgwsr)^2
           sumsq_mar += (mars[i]*100 - avgmar)^2
+          sumsq_ksmr += (ksmrs[i]*100 - avgksmr)^2
           }
           stdev_wsr=sqrt(sumsq_wsr/(N-1))
           stdev_mar=sqrt(sumsq_mar/(N-1))
-	printf "WSR  %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f ) - WSR stdev: %1.4f \n",interval,precision(lowerwsr),precision(upperwsr),avgwsr,wsrint,stdev_wsr
-	printf "MAR  %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f ) - MAR stdev: %1.4f \n",interval,precision(lowermar),precision(uppermar),avgmar,marint,stdev_mar
+          stdev_ksmr=sqrt(sumsq_ksmr/(N-1))
+
+
+	printf "WSR   %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f ) - WSR  stdev: %1.4f \n",interval,precision(lowerwsr),precision(upperwsr),avgwsr,wsrint,stdev_wsr
+	printf "MAR   %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f ) - MAR  stdev: %1.4f \n",interval,precision(lowermar),precision(uppermar),avgmar,marint,stdev_mar
+	printf "KSMR  %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f ) - KSMR stdev: %1.4f \n",interval,precision(lowerksmr),precision(upperksmr),avgksmr,ksmrint,stdev_ksmr
 #	print "WSR     "interval"% confidence interval:            " lowerwsr " -- " upperwsr " ( " avgwsr " +- " wsrint " )"
 #	print "MAR     "interval"% confidence interval:            " lowermar " -- " uppermar " ( " avgmar " +- " marint " )"
 
@@ -151,26 +173,32 @@ function precision (val) {
 					
 	        lowerbasmar=basmar[rest]*100;         upperbasmar=basmar[N-rest]*100
 	        avgbasmar=(lowerbasmar+upperbasmar)/2;    basmarint=upperbasmar-avgbasmar
-		printf "WSR  %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowerbaswsr),precision(upperbaswsr),avgbaswsr,baswsrint
-		printf "MAR  %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %2.4f )\n",interval,precision(lowerbasmar),precision(upperbasmar),avgbasmar,basmarint
+				
+	        lowerbasksmr=basksmr[rest]*100;         upperbasksmr=basksmr[N-rest]*100
+	        avgbasksmr=(lowerbasksmr+upperbasksmr)/2;    basksmrint=upperbasksmr-avgbasksmr
 
-#	        print "WSR  "interval"% confidence interval:            " lowerbaswsr " -- " upperbaswsr " ( " avgbaswsr " +- " baswsrint " )"
-#	        print "MAR  "interval"% confidence interval:            " lowerbasmar " -- " upperbasmar " ( " avgbasmar " +- " basmarint " )"
-		
+		printf "WSR   %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %1.4f )\n",interval,precision(lowerbaswsr),precision(upperbaswsr),avgbaswsr,baswsrint
+		printf "MAR   %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %2.4f )\n",interval,precision(lowerbasmar),precision(upperbasmar),avgbasmar,basmarint
+		printf "KSMR  %2.1f%% confidence interval:           %2.4f -- %2.4f ( %2.4f +- %2.4f )\n",interval,precision(lowerbasksmr),precision(upperbasksmr),avgbasksmr,basksmrint
 
 		print ""
 		for (i=1;i<=N;++i) printf("%s ", mardiffs[i]) > tmp"/mardiffs"
 		for (i=1;i<=N;++i) printf("%s ", wsrdiffs[i]) > tmp"/wsrdiffs"
+		for (i=1;i<=N;++i) printf("%s ", ksmrdiffs[i]) > tmp"/ksmrdiffs"
 		lowerwsrdiff=wsrdiffs[rest]*100;               upperwsrdiff=wsrdiffs[N-rest]*100
 		avgwsrdiff=(lowerwsrdiff+upperwsrdiff)/2;     wsrintdiff=upperwsrdiff-avgwsrdiff
 
 		lowermardiff=mardiffs[rest]*100;                 uppermardiff=mardiffs[N-rest]*100
 		avgmardiff=(lowermardiff+uppermardiff)/2;        marintdiff=uppermardiff-avgmardiff
-		printf "WSR  pairwise improvement %2.1f%% interval: % 2.4f -- % 2.4f ( % 2.4f +- % 1.4f )\n",interval,precision(lowerwsrdiff),precision(upperwsrdiff),avgwsrdiff,wsrintdiff
-		printf "MAR  pairwise improvement %2.1f%% interval: % 2.4f -- % 2.4f ( % 2.4f +- % 1.4f )\n",interval,precision(lowermardiff),precision(uppermardiff),avgmardiff,marintdiff
-#		print "WSR pairwise improvement "interval"% interval: " lowerwsrdiff " -- " upperwsrdiff " ( " avgwsrdiff " +- " wsrintdiff " )"
-#		print "MAR pairwise improvement  "interval"% interval: " lowermardiff " -- " uppermardiff " ( " avgmardiff " +- " marintdiff " )"
+
+		lowerksmrdiff=ksmrdiffs[rest]*100;                 upperksmrdiff=ksmrdiffs[N-rest]*100
+		avgksmrdiff=(lowerksmrdiff+upperksmrdiff)/2;        ksmrintdiff=upperksmrdiff-avgksmrdiff
+
+		printf "WSR   pairwise improvement %2.1f%% interval: % 2.4f -- % 2.4f ( % 2.4f +- % 1.4f )\n",interval,precision(lowerwsrdiff),precision(upperwsrdiff),avgwsrdiff,wsrintdiff
+		printf "MAR   pairwise improvement %2.1f%% interval: % 2.4f -- % 2.4f ( % 2.4f +- % 1.4f )\n",interval,precision(lowermardiff),precision(uppermardiff),avgmardiff,marintdiff
+		printf "KSRM  pairwise improvement %2.1f%% interval: % 2.4f -- % 2.4f ( % 2.4f +- % 1.4f )\n",interval,precision(lowerksmrdiff),precision(upperksmrdiff),avgksmrdiff,ksmrintdiff
+
 	}
-}' $tmpdir/wsrcounts $baswsrcnts
+}' $tmpdir/wsrcounts $baswsrcnts 
 
 exit
