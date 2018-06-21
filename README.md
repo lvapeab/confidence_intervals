@@ -4,7 +4,7 @@ Bootstrap resampling for some tasks
 ## MT quality: Bleu - TER - Meteor
 
 ```
-Usage:	 confindence intervals.sh <-r reference> <-t hypothesis> <-n nreps>  <-l lan> 
+Usage:	 confidence intervals.sh <-r reference> <-t hypothesis> <-n nreps>  <-l lan> 
  	                          [-b baseline] [-i interval] [-y] [-v] [-h] 
  	 This script will take up a reference file and a hypothesis file and compute TER and BLEU confidence 
  	 intervals by means of bootstrapping. Note: This script needs a *modified* version of TERCOM and 
@@ -38,3 +38,12 @@ Usage:	 imt_confindence intervals.sh <-t scores> <-n nreps>
  	 -h: show this help and exit. 
  Output: - confidence interval
 ```
+
+
+# Approximate Randomization Testing
+
+Requires `art`: https://github.com/smartschat/art .
+
+Two-sided paired approximate randomization tests to assess the statistical significance of the difference in performance between two systems, A and B.
+ 
+art.sh <-r reference> <b output-systemA > <-t output-systemB > <-n nreps>  <-l lan> 
