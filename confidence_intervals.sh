@@ -1,6 +1,8 @@
 #!/bin/bash 
 
 # Changelog:
+# 22/06/2018 Álvaro Peris:
+# - Compute statistical significance with paired-approximate randomization test.
 # 17/01/2017 Álvaro Peris:
 # - Added Meteor metric
 # 18/11/2011 German Sanchis-Trilles:
@@ -116,9 +118,17 @@ if [ "$bas" != "" ]; then  # computing pairwise improvement
 	
 fi
 
+
+if [ "$bas" != "" ]; then  # computing pairwise improvement
+    cat ${tmpdir}/tercounts >  ${tmpdir}/ori_tercounts
+    cat ${tmpdir}/tercounts_bas >  ${tmpdir}/ori_tercounts_bas
+    cat ${tmpdir}/bleucounts > ${tmpdir}/ori_bleucounts
+    cat ${tmpdir}/bleucounts_bas > ${tmpdir}/ori_bleucounts_bas
+fi
+
+
 ${AWK} -v N=${nreps} -v interval=${interval} -v tmp=${tmpdir} -v size=${N} '
 function precision (val) {
-#	pp=int(log(N/100)/log(10))   # --> this is buggy... for N=1000 returns pp=2!!
 	pp=length(N)-3
 	return int(val*(10**pp)+0.5)/(10**pp)
 }{	if (ARGIND==1) bleucounts[FNR]=$0
@@ -266,5 +276,44 @@ function precision (val) {
 #		print "TER pairwise improvement  "interval"% interval: " lowerterdiff " -- " upperterdiff " ( " avgterdiff " +- " terintdiff " )"
 	}
 }' ${tmpdir}/bleucounts ${tmpdir}/tercounts ${tmpdir}/meteorcounts ${basbleucnts} ${bastercnts} ${basmeteorcnts}
+
+
+
+
+if [ "$bas" != "" ]; then  # computing pairwise improvement
+    echo "Computing statistical significance with approximate_randomization..."
+    cat ${tmpdir}/ori_tercounts | ${AWK} '{print $1/$2}' >  ${tmpdir}/ters
+    cat ${tmpdir}/ori_tercounts_bas | ${AWK} '{print $1/$2}' >  ${tmpdir}/ters_bas
+
+    cat ${tmpdir}/ori_bleucounts | ${AWK} '{
+             split($0, bp);
+             for (j=1;j<=9;++j)
+                bleucountacc[j]+=bp[j]
+            if (bleucountacc[9] > bleucountacc[5])
+                brevpen=exp(1-bleucountacc[9]/bleucountacc[5])
+            else
+                brevpen=1
+            bleus=exp((log(bleucountacc[1]/bleucountacc[5]) + log(bleucountacc[2]/bleucountacc[6]) + log(bleucountacc[3]/bleucountacc[7]) + log(bleucountacc[4]/bleucountacc[8]))/4)*brevpen;
+            print bleus }' > ${tmpdir}/bleus
+
+    cat ${tmpdir}/ori_bleucounts_bas | ${AWK} '{
+             split($0, bp);
+             for (j=1;j<=9;++j)
+                bleucountacc[j]+=bp[j]
+            if (bleucountacc[9] > bleucountacc[5])
+                brevpen=exp(1-bleucountacc[9]/bleucountacc[5])
+            else
+                brevpen=1
+            bleus=exp((log(bleucountacc[1]/bleucountacc[5]) + log(bleucountacc[2]/bleucountacc[6]) + log(bleucountacc[3]/bleucountacc[7]) + log(bleucountacc[4]/bleucountacc[8]))/4)*brevpen;
+            print bleus }' > ${tmpdir}/bleus_bas
+
+
+    echo "Computing significance level of BLEU"
+    python ./approximate_randomization_test.py ${tmpdir}/bleus_bas ${tmpdir}/bleus ${nreps}
+
+    echo "Computing significance level of TER"
+    python ./approximate_randomization_test.py ${tmpdir}/ters_bas ${tmpdir}/ters ${nreps}
+
+fi
 
 exit
