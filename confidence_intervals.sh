@@ -18,8 +18,8 @@
 
 help="\t\t17/01/2017 Á. Peris - 18/11/2011 J.A. Silvestre - 30/10/2009 G. Sanchis-Trilles                    \n
 \n
-Usage:\t confindence_intervals.sh <-r reference> <-t hypothesis> <-n nreps> <-l lan>                          \n
-\t__________________________[-b baseline] [-i interval] [-y] [-v] [-h]                                       \n
+Usage:\t confindence_intervals.sh <-r reference> <-t hypothesis> <-n nreps>                                  \n
+\t__________________________[-b baseline] [-i interval] [-l lan] [-y] [-v] [-h]                              \n
 \t This script will take up a reference file and a hypothesis file and compute TER and BLEU confidence       \n
 \t intervals by means of bootstrapping. Note: This script needs a *modified* version of TERCOM and           \n
 \t multi-bleu.perl. These two modified versions are included into this script for simplicity purposes and    \n
@@ -30,7 +30,7 @@ Input:\t -r reference: file containing the reference translations.              
 \t       -n nreps: number of repetitions to do via bootstrapping.                                            \n
 \t       -i interval: confidence interval to compute (default 95)                                            \n
 \t       -y: do not delete temporary files.                                                                  \n
-\t       -l: language (required for Meteor).                                                                 \n                                                                                                    
+\t       -l: language (required for Meteor. (default en)                                                    \n                                                                                                    
 \t       -v: activate verbose mode (set -x).                                                                 \n
 \t       -h: show this help and exit.                                                                        \n
 Output:  - confidence interval"
@@ -39,8 +39,9 @@ perl=$(which perl)
 java=$(which java)
 if [ "$(which gawk)" != "" ]; then AWK=$(which gawk); else AWK=$(which awk); fi
 interval=95
-
+lan=en
 me=${BASH_SOURCE[0]}
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
 nmoptions=$(cat ${me} | ${AWK} '/^exit$/{exit}{print $0}' | grep "++moptions" | wc -l | gawk '{ print $1-1 }')
 moptions=0;
@@ -53,7 +54,7 @@ for ((i=0;i<${#cmd[@]};i++)); do
 	"-n")		    nreps=${cmd[$((++i))]};((++moptions));;
 	"-i")		    interval=${cmd[$((++i))]};;
 	"-y")               deletetemp="false";;
-        "-l")               lan=${cmd[$((++i))]};((++moptions));;
+        "-l")               lan=${cmd[$((++i))]};;
         "-v")               set -x;;
         *)               echo -e ${help} | tr '_' ' '; exit;;
     esac
@@ -78,15 +79,15 @@ echo "Reading hypotheses from $trans..."
 
 N=$(wc -l ${ref} | ${AWK} '{ print $1 }')
 
-mbleu=./sbs_mbleu.perl
+mbleu=${DIR}/sbs_mbleu.perl
 #tercom=$tmpdir/sbs_tercom.jar
 #tail -c $((4568+36336)) $me | head -c 4568 > $tmpdir/sbs_mbleu.perl
 #tail -c 36336 $me > $tmpdir/sbs_tercom.jar
 
 #mbleu=$HOME/bin/sbs_mbleu.perl
-tercom=./sbs_tercom.jar
+tercom=${DIR}/sbs_tercom.jar
 
-meteorcom=./meteor-*.jar
+meteorcom=${DIR}/meteor-*.jar
 
 ${perl} ${mbleu} ${ref} < ${trans} 2>&1 | grep -v "^BLEU" > ${tmpdir}/bleucounts
 
@@ -116,14 +117,6 @@ if [ "$bas" != "" ]; then  # computing pairwise improvement
 	bastercnts=${tmpdir}/tercounts_bas
 	basmeteorcnts=${tmpdir}/meteorcounts_bas
 	
-fi
-
-
-if [ "$bas" != "" ]; then  # computing pairwise improvement
-    cat ${tmpdir}/tercounts >  ${tmpdir}/ori_tercounts
-    cat ${tmpdir}/tercounts_bas >  ${tmpdir}/ori_tercounts_bas
-    cat ${tmpdir}/bleucounts > ${tmpdir}/ori_bleucounts
-    cat ${tmpdir}/bleucounts_bas > ${tmpdir}/ori_bleucounts_bas
 fi
 
 
@@ -282,10 +275,10 @@ function precision (val) {
 
 if [ "$bas" != "" ]; then  # computing pairwise improvement
     echo "Computing statistical significance with approximate_randomization..."
-    cat ${tmpdir}/ori_tercounts | ${AWK} '{print $1/$2}' >  ${tmpdir}/ters
-    cat ${tmpdir}/ori_tercounts_bas | ${AWK} '{print $1/$2}' >  ${tmpdir}/ters_bas
+    cat ${tmpdir}/tercounts | ${AWK} '{print $1/$2}' >  ${tmpdir}/ters
+    cat ${tmpdir}/tercounts_bas | ${AWK} '{print $1/$2}' >  ${tmpdir}/ters_bas
 
-    cat ${tmpdir}/ori_bleucounts | ${AWK} '{
+    cat ${tmpdir}/bleucounts | ${AWK} '{
              split($0, bp);
              for (j=1;j<=9;++j)
                 bleucountacc[j]+=bp[j]
@@ -296,7 +289,7 @@ if [ "$bas" != "" ]; then  # computing pairwise improvement
             bleus=exp((log(bleucountacc[1]/bleucountacc[5]) + log(bleucountacc[2]/bleucountacc[6]) + log(bleucountacc[3]/bleucountacc[7]) + log(bleucountacc[4]/bleucountacc[8]))/4)*brevpen;
             print bleus }' > ${tmpdir}/bleus
 
-    cat ${tmpdir}/ori_bleucounts_bas | ${AWK} '{
+    cat ${tmpdir}/bleucounts_bas | ${AWK} '{
              split($0, bp);
              for (j=1;j<=9;++j)
                 bleucountacc[j]+=bp[j]
@@ -309,10 +302,10 @@ if [ "$bas" != "" ]; then  # computing pairwise improvement
 
 
     echo "Computing significance level of BLEU"
-    python ./approximate_randomization_test.py ${tmpdir}/bleus_bas ${tmpdir}/bleus ${nreps}
+    python ${DIR}/approximate_randomization_test.py ${tmpdir}/bleus_bas ${tmpdir}/bleus ${nreps}
 
     echo "Computing significance level of TER"
-    python ./approximate_randomization_test.py ${tmpdir}/ters_bas ${tmpdir}/ters ${nreps}
+    python ${DIR}/approximate_randomization_test.py ${tmpdir}/ters_bas ${tmpdir}/ters ${nreps}
 
 fi
 
