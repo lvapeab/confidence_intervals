@@ -1,5 +1,7 @@
 #!/bin/bash 
 
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 # Changelog:
 
 # 30/11/2017 Álvaro Peris Abril:
@@ -24,7 +26,7 @@ Usage:\t imt_confindence_intervals.sh <-t scores> <-n nreps>                    
 \t This script will take up a WSR and MAR scores file and compute MAR and WSR confidence                     \n
 \t intervals by means of bootstrapping. If [-b baseline] is specified, pairwise improvement                  \n
 \t intervals will also be computed. \n
-Input:\t -b baseline: file containing the baseline scores. If specified, pair                                \n
+Input:\t -b baseline: file containing the baseline scores. If specified, pairwise improvement will be computed\n
 \t       -t scores: file containing the scores to be evaluated.                                              \n
 \t       -n nreps: number of repetitions to do via bootstrapping.                                            \n
 \t       -i interval: confidence interval to compute (default 95)                                            \n
@@ -200,5 +202,32 @@ function precision (val) {
 
 	}
 }' $tmpdir/wsrcounts $baswsrcnts 
+
+
+if [ "$bas" != "" ]; then  # computing pairwise improvement                                              
+
+    cat ${tmpdir}/wsrcounts | ${AWK} '{print $1}' > ${tmpdir}/wsr_counts
+    cat	${tmpdir}/wsrcounts | ${AWK} '{print $2}' > ${tmpdir}/mar_counts
+    cat	${tmpdir}/wsrcounts | ${AWK} '{print $3}' > ${tmpdir}/ksmr_counts
+
+    cat	${tmpdir}/wsrcounts_bas | ${AWK} '{print $1}' > ${tmpdir}/wsr_counts_bas
+    cat ${tmpdir}/wsrcounts_bas | ${AWK} '{print $2}' > ${tmpdir}/mar_counts_bas
+    cat ${tmpdir}/wsrcounts_bas | ${AWK} '{print $3}' > ${tmpdir}/ksmr_counts_bas
+
+
+    echo ""
+    echo "Computing WSR statistical significance with approximate randomization..."
+    python ${DIR}/approximate_randomization_test.py ${tmpdir}/wsr_counts_bas  ${tmpdir}/wsr_counts  ${nreps}
+
+    echo "Computing MAR statistical significance with approximate randomization..."
+    python ${DIR}/approximate_randomization_test.py ${tmpdir}/mar_counts_bas  ${tmpdir}/mar_counts  ${nreps}
+
+    echo "Computing KSMR statistical significance with approximate randomization..."
+    python ${DIR}/approximate_randomization_test.py ${tmpdir}/ksmr_counts_bas  ${tmpdir}/ksmr_counts  ${nreps}
+
+
+    
+fi
+
 
 exit
