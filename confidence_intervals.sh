@@ -77,7 +77,15 @@ fi
 echo "Reading reference translations from $ref..."
 echo "Reading hypotheses from $trans..."
 
-N=$(wc -l ${ref} | ${AWK} '{ print $1 }')
+ref_escaped=${tmpdir}/`basename ${ref}`_escaped
+trans_escaped=${tmpdir}/`basename ${trans}`_escaped
+
+sed  's/#/\\#/g'< ${ref} > ${ref_escaped}
+sed  's/#/\\#/g'< ${trans} > ${trans_escaped}
+
+
+
+N=$(wc -l ${ref_escaped} | ${AWK} '{ print $1 }')
 
 mbleu=${DIR}/sbs_mbleu.perl
 #tercom=$tmpdir/sbs_tercom.jar
@@ -89,14 +97,14 @@ tercom=${DIR}/sbs_tercom.jar
 
 meteorcom=${DIR}/meteor-*.jar
 
-${perl} ${mbleu} ${ref} < ${trans} 2>&1 | grep -v "^BLEU" > ${tmpdir}/bleucounts
+${perl} ${mbleu} ${ref_escaped} < ${trans_escaped} 2>&1 | grep -v "^BLEU" > ${tmpdir}/bleucounts
 
-cat ${ref} | ${AWK} '{ print $0,"(TER-"NR")" }' > ${tmpdir}/ter_ref
-cat ${trans} | ${AWK} '{ print $0,"(TER-"NR")" }' > ${tmpdir}/ter_hyp
+cat ${ref_escaped} | ${AWK} '{ print $0,"(TER-"NR")" }' > ${tmpdir}/ter_ref
+cat ${trans_escaped} | ${AWK} '{ print $0,"(TER-"NR")" }' > ${tmpdir}/ter_hyp
 ${java} -Xmx512m -jar ${tercom} -r ${tmpdir}/ter_ref -h ${tmpdir}/ter_hyp  > ${tmpdir}/ter_res
 cat ${tmpdir}/ter_res | grep "Sentence TER: "| cut -d ' ' -f 3,4 > ${tmpdir}/tercounts
 
-${java} -Xmx512m -jar ${meteorcom} ${trans} ${ref} -l ${lan}  > ${tmpdir}/meteor_res
+${java} -Xmx512m -jar ${meteorcom} ${trans_escaped} ${ref_escaped} -l ${lan}  > ${tmpdir}/meteor_res
 cat ${tmpdir}/meteor_res | grep "Segment"| ${AWK} 'BEGIN{FS="\t"}{print $2}' > ${tmpdir}/meteorcounts
 
 
@@ -104,13 +112,16 @@ if [ "$bas" != "" ]; then  # computing pairwise improvement
 
 	echo -e "Reading baseline translations from $bas..."
 	echo -e "baseline given: will compute pairwise improvement intervals as well!"
-	${perl} ${mbleu} ${ref} < ${bas} 2>&1 | grep -v "^BLEU" > ${tmpdir}/bleucounts_bas
+	bas_escaped=${tmpdir}/`basename ${bas}`_escaped
+	sed  's/#/\\#/g'< ${bas} > ${bas_escaped}
 
-	cat ${bas} | ${AWK} '{ print $0,"(TER-"NR")" }' > ${tmpdir}/ter_bas
+	${perl} ${mbleu} ${ref_escaped} < ${bas_escaped} 2>&1 | grep -v "^BLEU" > ${tmpdir}/bleucounts_bas
+
+	cat ${bas_escaped} | ${AWK} '{ print $0,"(TER-"NR")" }' > ${tmpdir}/ter_bas
 	${java} -Xmx512m -jar ${tercom} -r ${tmpdir}/ter_ref -h ${tmpdir}/ter_bas > ${tmpdir}/ter_res_bas
 	cat ${tmpdir}/ter_res_bas | grep "Sentence TER: "| cut -d ' ' -f 3,4 > ${tmpdir}/tercounts_bas
 
-	${java} -Xmx512m -jar ${meteorcom} ${bas} ${ref} -l ${lan}  > ${tmpdir}/meteor_res_bas
+	${java} -Xmx512m -jar ${meteorcom} ${bas_escaped} ${ref_escaped} -l ${lan}  > ${tmpdir}/meteor_res_bas
 	cat ${tmpdir}/meteor_res_bas | grep "Segment" |${AWK} 'BEGIN{FS="\t"}{print $2}' > ${tmpdir}/meteorcounts_bas
 
 	basbleucnts=${tmpdir}/bleucounts_bas
