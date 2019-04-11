@@ -93,7 +93,7 @@ ${perl} ${mbleu} ${ref} < ${trans} 2>&1 | grep -v "^BLEU" > ${tmpdir}/bleucounts
 
 cat ${ref} | ${AWK} '{ print $0,"(TER-"NR")" }' > ${tmpdir}/ter_ref
 cat ${trans} | ${AWK} '{ print $0,"(TER-"NR")" }' > ${tmpdir}/ter_hyp
-${java} -Xmx512m -jar ${tercom} -r ${tmpdir}/ter_ref -h ${tmpdir}/ter_hyp  > ${tmpdir}/ter_res
+${java} -Xmx512m -jar ${tercom} -r ${tmpdir}/ter_ref -h ${tmpdir}/ter_hyp -s > ${tmpdir}/ter_res
 cat ${tmpdir}/ter_res | grep "Sentence TER: "| cut -d ' ' -f 3,4 > ${tmpdir}/tercounts
 
 ${java} -Xmx512m -jar ${meteorcom} ${trans} ${ref} -l ${lan}  > ${tmpdir}/meteor_res
