@@ -23,8 +23,6 @@ setup(name='confidence_intervals',
           "License :: OSI Approved :: MIT License"
       ],
       install_requires=[
-          'coco-caption @ https://github.com/lvapeab/coco-caption/archive/master.zip',
           'art @ https://github.com/lvapeab/art/archive/master.zip',
-          'multimodal-keras-wrapper',
       ],
       )
