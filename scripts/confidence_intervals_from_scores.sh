@@ -145,7 +145,7 @@ if [ "$bas" != "" ]; then  # computing pairwise improvement
     echo "Computing statistical significance with approximate_randomization..."
 
     echo "Computing significance level"
-    python ${DIR}/approximate_randomization_test.py ${tmpdir}/scores ${tmpdir}/basscores ${nreps}
+    python ${DIR}/../python/approximate_randomization_test.py ${tmpdir}/scores ${tmpdir}/basscores ${nreps}
 
 fi
 

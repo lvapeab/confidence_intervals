@@ -217,13 +217,13 @@ if [ "$bas" != "" ]; then  # computing pairwise improvement
 
     echo ""
     echo "Computing WSR statistical significance with approximate randomization..."
-    python ${DIR}/approximate_randomization_test.py ${tmpdir}/wsr_counts_bas  ${tmpdir}/wsr_counts  ${nreps}
+    python ${DIR}/../python/approximate_randomization_test.py ${tmpdir}/wsr_counts_bas  ${tmpdir}/wsr_counts  ${nreps}
 
     echo "Computing MAR statistical significance with approximate randomization..."
-    python ${DIR}/approximate_randomization_test.py ${tmpdir}/mar_counts_bas  ${tmpdir}/mar_counts  ${nreps}
+    python ${DIR}/../python/approximate_randomization_test.py ${tmpdir}/mar_counts_bas  ${tmpdir}/mar_counts  ${nreps}
 
     echo "Computing KSMR statistical significance with approximate randomization..."
-    python ${DIR}/approximate_randomization_test.py ${tmpdir}/ksmr_counts_bas  ${tmpdir}/ksmr_counts  ${nreps}
+    python ${DIR}/../python/approximate_randomization_test.py ${tmpdir}/ksmr_counts_bas  ${tmpdir}/ksmr_counts  ${nreps}
 
 
     

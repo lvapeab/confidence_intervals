@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import numpy as np
-from keras_wrapper.extra.read_write import *
+from keras_wrapper.extra.read_write import file2list
 from pycocoevalcap.sentence_bleu.sentence_bleu import SentenceBleuScorer
-from builtins import map, zip
+from builtins import zip
 import argparse
 from art import aggregators
 from art.scores import Scores, Score
 from art import significance_tests
+
 parser = argparse.ArgumentParser(
-    description="""Computes BLEU from a htypotheses file with respect to one or more reference files and compute significant differences using ART (approximate randomization tests).""", formatter_class=argparse.RawTextHelpFormatter)
+    description="""Computes BLEU from a htypotheses file with respect to one or more reference files and compute significant differences using ART (approximate randomization tests).""",
+    formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('-t', '--hypotheses', type=str, help='Hypotheses file')
 parser.add_argument('-r', '--references', type=str, help='Path to all the reference files (single-reference files)')
 parser.add_argument('-b', '--baseline', type=str, help='Baseline file')
@@ -42,8 +43,8 @@ def evaluate_from_file(args):
         bleu = sentence_bleu_scorer.score(hyp_line.split())
         bleus_baseline.append(bleu)
 
-    print ("Average BLEU hypotheses: " + str(float(sum(bleus))/len(bleus)))
-    print ("Average BLEU baseline:   " + str(float(sum(bleus_baseline))/len(bleus_baseline)))
+    print("Average BLEU hypotheses: " + str(float(sum(bleus)) / len(bleus)))
+    print("Average BLEU baseline:   " + str(float(sum(bleus_baseline)) / len(bleus_baseline)))
 
     scores_system = []
     scores_baseline = []
@@ -53,8 +54,8 @@ def evaluate_from_file(args):
     for bleu in bleus_baseline:
         scores_baseline.append(Score([bleu]))
 
-    scores_sys = Scores(scores_system)
-    scores_bsln = Scores(scores_baseline)
+    scores_system = Scores(scores_system)
+    scores_baseline = Scores(scores_baseline)
 
     test = significance_tests.ApproximateRandomizationTest(
         scores_system,
@@ -62,7 +63,8 @@ def evaluate_from_file(args):
         aggregators.average,
         trials=int(args.n_reps))
 
-    print ("\t Significance level:",  test.run())
+    print("\t Significance level:", test.run())
+
 
 if __name__ == "__main__":
     evaluate_from_file(parser.parse_args())

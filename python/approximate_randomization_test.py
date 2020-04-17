@@ -9,5 +9,5 @@ test = significance_tests.ApproximateRandomizationTest(
     aggregators.average,
     trials=int(sys.argv[3]))
 
-print "\t Significance level:",  test.run()
+print ("\t Significance level:",  test.run())
 

@@ -81,23 +81,6 @@ if [ "$bas" != "" ]; then  # computing pairwise improvement
 
 fi
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 $AWK -v N=$nreps -v interval=$interval -v tmp=$tmpdir -v size=$N '
 function precision (val) {
 #	pp=int(log(N/100)/log(10))   # --> this is buggy... for N=1000 returns pp=2!!

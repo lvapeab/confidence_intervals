@@ -302,10 +302,10 @@ if [ "$bas" != "" ]; then  # computing pairwise improvement
 
 
     echo "Computing significance level of BLEU"
-    python ${DIR}/approximate_randomization_test.py ${tmpdir}/bleus_bas ${tmpdir}/bleus ${nreps}
+    python ${DIR}/../python/approximate_randomization_test.py ${tmpdir}/bleus_bas ${tmpdir}/bleus ${nreps}
 
     echo "Computing significance level of TER"
-    python ${DIR}/approximate_randomization_test.py ${tmpdir}/ters_bas ${tmpdir}/ters ${nreps}
+    python ${DIR}/../python/approximate_randomization_test.py ${tmpdir}/ters_bas ${tmpdir}/ters ${nreps}
 
 fi
 

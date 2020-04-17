@@ -30,6 +30,7 @@ if [ "$(which gawk)" != "" ]; then AWK=$(which gawk); else AWK=$(which awk); fi
 interval=95
 
 me=${BASH_SOURCE[0]}
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
 nmoptions=$(cat ${me} | ${AWK} '/^exit$/{exit}{print $0}' | grep "++moptions" | wc -l | gawk '{ print $1-1 }')
 moptions=0;
@@ -115,9 +116,9 @@ cat ${tmpdir}/bleucounts_bas | ${AWK} '{
 
 
 echo "Computing significance level of BLEU"
-python ./approximate_randomization_test.py ${tmpdir}/bleus_bas ${tmpdir}/bleus ${nreps}
+python ${DIR}/../python//approximate_randomization_test.py ${tmpdir}/bleus_bas ${tmpdir}/bleus ${nreps}
 
 echo "Computing significance level of TER"
-python ./approximate_randomization_test.py ${tmpdir}/ters_bas ${tmpdir}/ters ${nreps}
+python ${DIR}/../python/approximate_randomization_test.py ${tmpdir}/ters_bas ${tmpdir}/ters ${nreps}
 
 exit
